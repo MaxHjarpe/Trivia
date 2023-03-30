@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useLayoutEffect, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Text, StyleSheet, View, Pressable, ScrollView } from "react-native";
 import axios, { AxiosResponse } from "axios";
 import { Loading } from "../Components/Loading";
 import { Error } from "../Components/Error";
 import { Correct } from "../Components/Correct";
+import Lottie from 'lottie-react-native';
 
 interface Trivia {
     category: string;
@@ -21,13 +22,18 @@ interface Trivia {
 export const HomeScreen = () => {
     // const [triviaQuestions, setTriviaQuestions] = useState<Trivia>();
     const [answers, setAnswers] = useState<string[]>([]);
+    const [maxHeight, setMaxHeight] = useState(0);
 
     const queryClient = useQueryClient()
 
     const { isLoading, error, data, isFetching } = useQuery({
         queryKey: ["question"],
         queryFn: () =>
-            axios.get<Trivia[]>("https://the-trivia-api.com/api/questions?limit=1&difficulty=medium").then((res: AxiosResponse<Trivia[]>) => {
+            axios.get<Trivia[]>("https://the-trivia-api.com/api/questions?limit=1&difficulty=medium")
+            .then((res: AxiosResponse<Trivia[]>) => 
+            {
+                if (res.data[0].question.length > 100 || res.data[0].incorrectAnswers.find(x => x.length > 50) || res.data[0].correctAnswer.length > 50) 
+                    queryClient.invalidateQueries();
                 return res.data;
             }),
     });
@@ -42,9 +48,12 @@ export const HomeScreen = () => {
         }
     }, [isLoading, data])
 
-    const validateAnswer = (answer: string) : boolean => {
+    const validateAnswer = (answer: string): boolean => {
         if (data![0].correctAnswer === answer) {
-            queryClient.invalidateQueries();
+            
+            setTimeout(() => {
+                queryClient.invalidateQueries();
+            }, 1000)
             return true;
         }
         return false;
@@ -61,22 +70,22 @@ export const HomeScreen = () => {
     }
 
 
-    if (isLoading) return <Loading loadingText={'Loading'} />
+    if (isLoading) return <Loading  />
 
     if (error) return <Error />
 
 
     return (
         <>
-            <ScrollView contentContainerStyle={{ alignItems: 'center', justifyContent: 'space-between' }} style={styles.container}>
+            <ScrollView contentContainerStyle={{ alignItems: 'center', justifyContent: 'space-evenly', flex: 1 }} style={styles.container}>
                 {data?.map((q) => {
                     return (
                         <>
-                            <View style={styles.container}>
+                            {/* <View style={styles.container}>
                                 <Text style={styles.text}>
                                     {q.category}
                                 </Text>
-                            </View>
+                            </View> */}
                             <View style={styles.container}>
                                 <Text style={styles.text}>
                                     {q.question}
@@ -85,22 +94,21 @@ export const HomeScreen = () => {
                         </>
                     )
                 })}
-                <View style={styles.container}>
-                    { }
-                    {shuffleArray(answers) ? answers.map((answer, index) => {
+                <View style={[styles.answersContainer]}>
+                    {answers && shuffleArray(answers) ? answers.map((answer, index) => {
                         return (
-                            <View style={styles.answersContainer}>
+                            <View style={{width: '100%'}}>
+
                                 <Pressable key={index} onPress={() => validateAnswer(answer)}>
                                     {({ pressed }) => (
-                                        <Text style={[{backgroundColor: pressed && validateAnswer(answer) ? 'green' : 'white'}, styles.answerText]}>{answer}</Text>
+                                        <Text style={[{ backgroundColor: pressed && validateAnswer(answer) ? '#00FF00' : '#e9e9e9' }, styles.answerText]}>{answer}</Text>
                                     )}
                                 </Pressable>
                             </View>
                         );
                     }) : (
-                        <Loading loadingText={'Loading'} />
+                        <Loading />
                     )}
-
                 </View>
             </ScrollView>
         </>
@@ -110,27 +118,33 @@ export const HomeScreen = () => {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        margin: 35,
+        margin: 20,
         backgroundColor: '#fff',
+        flexDirection: 'row'
     },
     separator: {
 
     },
     text: {
-        color: 'red',
+        color: 'black',
         fontWeight: 'bold',
         fontSize: 20
     },
     answersContainer: {
-        maxWidth: '50%',
-        borderColor: 'red',
-        borderWidth: 1,
-        fontSize: 30,
-        flexDirection: "row"
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        width: '100%',
+        marginTop: 20
     },
     answerText: {
-        fontSize: 30,
+        fontSize: 16,
+        padding: 10,
+        margin: 10,
+        borderColor: 'black',
+        borderWidth: 1,
+        borderRadius: 5,
+        textAlign: 'center'
     }
 
 });

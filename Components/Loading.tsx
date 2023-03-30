@@ -1,12 +1,10 @@
+import Lottie from 'lottie-react-native';
 import React from "react";
 import { Text } from 'react-native';
 
-type Prop = {
-    loadingText : string,
-}
 
-export const Loading = ({loadingText}: Prop) => {
+export const Loading = () => {
     return (
-        <Text>{loadingText}...</Text>
+        <Lottie source={require('../lottie/loading.json')}/>
     )
 }
